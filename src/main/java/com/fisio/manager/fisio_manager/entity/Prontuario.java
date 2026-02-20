@@ -108,4 +108,7 @@ public class Prontuario {
     @JsonManagedReference
     private List<Sessoes> sessoes;
 
+
+    private String patientId;
+
 }

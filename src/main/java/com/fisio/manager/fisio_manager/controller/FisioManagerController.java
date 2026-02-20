@@ -1,9 +1,12 @@
 package com.fisio.manager.fisio_manager.controller;
 
+import com.fisio.manager.fisio_manager.dto.AgendamentoDTO;
 import com.fisio.manager.fisio_manager.entity.Paciente;
 import com.fisio.manager.fisio_manager.entity.Sessoes;
+import com.fisio.manager.fisio_manager.entity.HorarioBloqueado;
 import com.fisio.manager.fisio_manager.repository.PacienteRepository;
 import com.fisio.manager.fisio_manager.repository.ProntuarioRepository;
+import com.fisio.manager.fisio_manager.repository.HorarioBloqueadoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,18 +37,20 @@ public class FisioManagerController {
     AgendamentoRepository agendamentoRepository;
     PacienteRepository pacienteRepository;
     ProntuarioRepository prontuarioRepository;
+    HorarioBloqueadoRepository horarioBloqueadoRepository;
 
 
-    public FisioManagerController(AgendamentoRepository agendamentoRepository, PacienteRepository pacienteRepository, ProntuarioRepository prontuarioRepository) {
+    public FisioManagerController(AgendamentoRepository agendamentoRepository, PacienteRepository pacienteRepository, ProntuarioRepository prontuarioRepository, HorarioBloqueadoRepository horarioBloqueadoRepository) {
         this.agendamentoRepository = agendamentoRepository;
         this.pacienteRepository = pacienteRepository;
         this.prontuarioRepository = prontuarioRepository;
+        this.horarioBloqueadoRepository = horarioBloqueadoRepository;
     }
 
 
     @GetMapping("/agendamentos")
-    public List<Agendamento> agendamentosString() {
-        return agendamentoRepository.findAll();
+    public List<AgendamentoDTO> agendamentosString() {
+        return agendamentoRepository.findAll().stream().map(AgendamentoDTO::new).toList();
     }
 
 
@@ -82,20 +87,22 @@ public class FisioManagerController {
     
 
     @DeleteMapping("/agendamentos/{id}")
-    public void deletarAgendamento(@RequestAttribute Agendamento agendamento) {
-        agendamentoRepository.delete(null);
+    public void deletarAgendamento(@PathVariable Long id) {
+        Agendamento agendamento = agendamentoRepository.findById(id).orElseThrow(() -> new RuntimeException("Agendamento Não encontrado"));
+        agendamentoRepository.delete(agendamento);
     }
 
 
 
     @PostMapping("/agendamentos/{id}")
-    public Agendamento atualizarAgendamento(@PathVariable Long id, @RequestBody Agendamento agendamento) {
+    public Agendamento atualizarAgendamento(@PathVariable Long id, @RequestBody AgendamentoDTO agendamento) {
         return agendamentoRepository.findById(id)
                 .map(agendamentoExistente -> {
-                    agendamentoExistente.setDate(agendamento.getDate());
-                    agendamentoExistente.setTime(agendamentoExistente.getTime());
-                    agendamentoExistente.setType(agendamentoExistente.getType());
-                    agendamentoExistente.setPaciente(agendamento.getPaciente());
+                    agendamentoExistente.setDate(agendamento.date());
+                    agendamentoExistente.setTime(agendamento.time());
+                    agendamentoExistente.setType(agendamento.type());
+                    agendamentoExistente.setPaciente(pacienteRepository.findById(agendamento.paciente_id()).orElseThrow(() -> new RuntimeException("Paciente Não encontrado")));
+
                     return agendamentoRepository.save(agendamentoExistente);
                 })
                 .orElseThrow(() -> new RuntimeException("Agendamento não encontrado"));
@@ -163,25 +170,49 @@ public class FisioManagerController {
     }
 
 
-    @PutMapping("/prontuarios")
-    public Prontuario adicionarProntuario(@RequestBody Prontuario prontuario) {
-        // Inicializar lista de sessões se for nula
+    @PutMapping("/prontuarios/")
+    public void adicionarProntuario(@RequestBody Prontuario prontuario) {
         if (prontuario.getSessoes() == null) {
             prontuario.setSessoes(new java.util.ArrayList<>());
         }
-        // Associar as sessões ao prontuário antes de salvar
         prontuario.getSessoes().forEach(sessao -> sessao.setProntuario(prontuario));
-        return prontuarioRepository.save(prontuario);
+        Paciente paciente = pacienteRepository.findById(Long.valueOf(prontuario.getPatientId())).orElseThrow(() -> new RuntimeException("Paciente Não encontrado"));
+        paciente.setProntuario(prontuario);
+        prontuarioRepository.save(prontuario);
+        pacienteRepository.save(paciente);
+
     }
 
     @GetMapping("/pacientes")
     public List<Paciente> pacientesString() {
         return pacienteRepository.findAll();
     }
-    
 
+    @PutMapping("/pacientes")
+    public Paciente adicionarPaciente(@RequestBody Paciente paciente) {
+        return pacienteRepository.save(paciente);
+    }
 
-    
-    
-    
+    // ========== HORÁRIOS BLOQUEADOS ==========
+
+    @GetMapping("/horarios-bloqueados")
+    public List<HorarioBloqueado> obterHorariosBloqueados() {
+        return horarioBloqueadoRepository.findAll();
+    }
+
+    @GetMapping("/horarios-bloqueados/{date}")
+    public List<HorarioBloqueado> obterHorariosBloqueadosPorData(@PathVariable String date) {
+        return horarioBloqueadoRepository.findByDate(date);
+    }
+
+    @PostMapping("/horarios-bloqueados")
+    public HorarioBloqueado bloquearHorario(@RequestBody HorarioBloqueado horarioBloqueado) {
+        return horarioBloqueadoRepository.save(horarioBloqueado);
+    }
+
+    @DeleteMapping("/horarios-bloqueados/{id}")
+    public void desbloquearHorario(@PathVariable Long id) {
+        horarioBloqueadoRepository.deleteById(id);
+    }
+
 }

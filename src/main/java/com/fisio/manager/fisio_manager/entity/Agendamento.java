@@ -1,5 +1,7 @@
 package com.fisio.manager.fisio_manager.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,9 +15,12 @@ public class Agendamento {
     @Id 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @OneToOne(cascade = CascadeType.PERSIST)
+    @ManyToOne(cascade = CascadeType.PERSIST)
+    @JoinColumn(name = "paciente_id")
+    @JsonBackReference
     private Paciente paciente;
     private String date;
     private String time;
     private String type;
+
 }
