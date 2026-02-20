@@ -66,14 +66,17 @@ public class FisioManagerController {
         ).orElse(
                pacienteRepository.save(entity.getPaciente())
         );
-        Prontuario prontuary = prontuarioRepository.findById(entity.getPaciente().getProntuario().getId()).map(
-                prontuario -> {
-                    entity.getPaciente().setProntuario(prontuario);
-                    return prontuario;
-                }
-        ).orElse(
-                prontuarioRepository.save(entity.getPaciente().getProntuario())
-        );
+        Prontuario prontuary = null;
+        if(entity.getPaciente().getProntuario() != null){
+            prontuary = prontuarioRepository.findById(entity.getPaciente().getProntuario().getId()).map(
+                    prontuario -> {
+                        entity.getPaciente().setProntuario(prontuario);
+                        return prontuario;
+                    }
+            ).orElse(
+                    prontuarioRepository.save(entity.getPaciente().getProntuario())
+            );
+        }
         entity.setPaciente(patient);
         entity.getPaciente().setProntuario(prontuary);
         return agendamentoRepository.save(entity);
