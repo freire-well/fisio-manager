@@ -196,7 +196,13 @@ public class FisioManagerController {
         return pacienteRepository.save(paciente);
     }
 
-    // ========== HORÁRIOS BLOQUEADOS ==========
+    @DeleteMapping
+    @RequestMapping("/pacientes/{id}")
+    public void deletarPaciente(@PathVariable Long id) {
+        Paciente paciente = pacienteRepository.findById(id).orElseThrow(() -> new RuntimeException("Paciente Não encontrado"));
+        pacienteRepository.delete(paciente);
+    }
+
 
     @GetMapping("/horarios-bloqueados")
     public List<HorarioBloqueado> obterHorariosBloqueados() {
